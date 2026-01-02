@@ -1,25 +1,39 @@
-# METAR Map Plugin
+# METAR Reports Plugin
 
-This plugin displays METAR (Meteorological Aerodrome Report) maps on your e-ink display.
+This plugin displays METAR (Meteorological Aerodrome Report) data from airports on your e-ink display.
 
 ## Features
 
-- Displays METAR map images from aviation weather services
-- Supports any METAR map URL that provides a direct image link
-- Works with various aviation weather services
+- Fetches real-time METAR data from the NOAA Aviation Weather API (free, no API key required)
+- Displays weather information for multiple airports
+- Automatically updates based on your playlist refresh interval
+- Default airports around KEDC (Austin Executive Airport): KEDC, KAUS, KT74, KGTU, KRYW, KHYI, KBMQ
 
 ## Configuration
 
-**URL is required.** You must provide a direct URL to a METAR map image in the plugin settings.
+- **Title**: Optional title displayed at the top (default: "METAR Reports")
+- **Airport ICAO Codes**: Comma-separated list of airport ICAO codes to display (e.g., `KEDC,KAUS,KT74`)
+  - If left empty, defaults to airports around KEDC
+  - Each airport must have a valid ICAO code (4 characters)
 
-## Finding METAR Map URLs
+## Data Source
 
-You can find METAR map images from various aviation weather services:
+The plugin uses the NOAA Aviation Weather API:
+- **Endpoint**: https://aviationweather.gov/api/data/metar
+- **Format**: JSON
+- **No API key required**
+- **Rate limits**: 100 requests per minute (more than enough for typical refresh intervals)
 
-- **Aviation Weather Center (AWC)**: Visit https://aviationweather.gov and look for METAR map images
-- **Other aviation weather services** that provide METAR map images
-- Make sure the URL points directly to an image file (PNG, JPG, etc.)
-- Test the URL in a web browser first to ensure it loads correctly
+## Display Information
+
+For each airport, the plugin displays:
+- Station ID (ICAO code)
+- Temperature
+- Wind direction and speed
+- Visibility
+- Altimeter setting
+- Cloud conditions
+- Raw METAR text
 
 ## Icon
 

@@ -1,0 +1,42 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+
+<div class="metar-container">
+    <div class="metar-header">
+        <div class="metar-title">{{ title }}</div>
+        <div class="metar-subtitle">Updated {{ last_update }}</div>
+    </div>
+    
+    <div class="metar-list">
+        {% for metar in metars %}
+        <div class="metar-item">
+            <div class="metar-station">{{ metar.station }}</div>
+            <div class="metar-details">
+                <div class="metar-row">
+                    <span class="metar-label">Temp:</span>
+                    <span class="metar-value">{{ metar.temp }}</span>
+                    <span class="metar-label">Wind:</span>
+                    <span class="metar-value">{{ metar.wind }}</span>
+                </div>
+                <div class="metar-row">
+                    <span class="metar-label">Visibility:</span>
+                    <span class="metar-value">{{ metar.visibility }}</span>
+                    <span class="metar-label">Alt:</span>
+                    <span class="metar-value">{{ metar.altimeter }}</span>
+                </div>
+                <div class="metar-row">
+                    <span class="metar-label">Clouds:</span>
+                    <span class="metar-value">{{ metar.clouds }}</span>
+                </div>
+                {% if metar.raw %}
+                <div class="metar-raw">{{ metar.raw }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
+

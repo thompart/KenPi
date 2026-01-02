@@ -1,5 +1,5 @@
 {
-    "display_name": "METAR Map",
+    "display_name": "METAR Reports",
     "id": "metar_map",
     "class": "MetarMap"
 }

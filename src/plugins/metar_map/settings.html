@@ -1,21 +1,29 @@
 <div class="form-group">
-    <label for="url" class="form-label">METAR Map URL:</label>
-    <input type="text" id="url" name="url" placeholder="https://..." required class="form-input">
+    <label for="title" class="form-label">Title:</label>
+    <input type="text" id="title" name="title" placeholder="METAR Reports" class="form-input">
     <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">
-        Enter a direct URL to a METAR map image. You can find METAR maps from various aviation weather services.
-        Example: Aviation Weather Center maps or other aviation weather providers that offer METAR map images.
+        Optional title to display at the top of the METAR display.
     </small>
 </div>
 
 <div class="form-group">
-    <span style="color: var(--text-primary);">Note: Make sure the URL points directly to an image file (PNG, JPG, etc.) that displays METAR observations on a map. Test the URL in a web browser first to ensure it loads correctly.</span>
+    <label for="airports" class="form-label">Airport ICAO Codes:</label>
+    <input type="text" id="airports" name="airports" placeholder="KEDC,KAUS,KT74,KGTU,KRYW" class="form-input">
+    <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">
+        Enter comma-separated ICAO codes (e.g., KEDC,KAUS,KT74). If empty, defaults to airports around KEDC: KEDC, KAUS, KT74, KGTU, KRYW, KHYI, KBMQ
+    </small>
+</div>
+
+<div class="form-group">
+    <span style="color: var(--text-primary);">Note: This plugin fetches real-time METAR data from the NOAA Aviation Weather API (no API key required). Data updates automatically based on your playlist refresh interval.</span>
 </div>
 
 <script>
     // populate form values from plugin settings
     document.addEventListener('DOMContentLoaded', () => {        
         if (loadPluginSettings) {
-            document.getElementById('url').value = pluginSettings.url || '';
+            document.getElementById('title').value = pluginSettings.title || '';
+            document.getElementById('airports').value = pluginSettings.airports || '';
         }
     });
 </script>

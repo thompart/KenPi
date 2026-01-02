@@ -89,6 +89,36 @@
         </select>
     </div>
 
+    <div class="form-group">
+        <input type="checkbox" id="displayMetar" name="displayMetar" onclick="this.value=this.checked ? 'true' : 'false';">
+        <span>Display METAR Data</span>
+    </div>
+
+    <div class="form-group" id="metarAirportGroup" style="display: none;">
+        <label for="metarAirport" class="form-label">Airport ICAO Code:</label>
+        <input type="text" id="metarAirport" name="metarAirport" class="form-input" placeholder="KEDC" maxlength="4" style="text-transform: uppercase;">
+        <span style="font-size: 0.9em; color: var(--text-secondary);">Enter 4-character ICAO code (e.g., KEDC, KAUS)</span>
+    </div>
+
+    <div class="form-group">
+        <label for="pressureUnit" class="form-label">Pressure Unit:</label>
+        <select id="pressureUnit" name="pressureUnit" class="form-input">
+            <option value="hPa">hPa (Hectopascals)</option>
+            <option value="inHg">inHg (Inches of Mercury)</option>
+            <option value="mb">mb (Millibars)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="visibilityUnit" class="form-label">Visibility Unit:</label>
+        <select id="visibilityUnit" name="visibilityUnit" class="form-input">
+            <option value="auto">Auto (based on main unit system)</option>
+            <option value="km">Kilometers</option>
+            <option value="mi">Miles</option>
+            <option value="m">Meters</option>
+        </select>
+    </div>
+
 </div>
 
 <div id="mapModal" class="modal">
@@ -217,6 +247,16 @@
             weatherProvider = pluginSettings.weatherProvider || 'OpenMeteo';
 
             document.getElementById('customTitle').value = pluginSettings.customTitle || '';
+
+            document.getElementById('displayMetar').checked = pluginSettings.displayMetar === "true";
+            document.getElementById('displayMetar').value = pluginSettings.displayMetar || "false";
+            document.getElementById('metarAirport').value = pluginSettings.metarAirport || 'KEDC';
+            if (pluginSettings.displayMetar === "true") {
+                document.getElementById('metarAirportGroup').style.display = 'block';
+            }
+
+            document.getElementById('pressureUnit').value = pluginSettings.pressureUnit || 'hPa';
+            document.getElementById('visibilityUnit').value = pluginSettings.visibilityUnit || 'auto';
         } else {
             // set default values
             document.getElementById('units').value = "imperial";
@@ -233,7 +273,33 @@
             document.getElementById('forecastDays').value = 7;
             document.getElementById('moonPhase').checked = false;
             document.getElementById('weatherTimeZone').value = "locationTimeZone";
+            document.getElementById('displayMetar').checked = false;
+            document.getElementById('displayMetar').value = "false";
+            document.getElementById('metarAirport').value = 'KEDC';
+            document.getElementById('pressureUnit').value = 'hPa';
+            document.getElementById('visibilityUnit').value = 'auto';
         }
+
+        // Initialize METAR airport group visibility
+        const displayMetarCheckbox = document.getElementById('displayMetar');
+        const metarGroup = document.getElementById('metarAirportGroup');
+        if (displayMetarCheckbox.checked) {
+            metarGroup.style.display = 'block';
+        }
+
+        // Toggle METAR airport input visibility
+        displayMetarCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                metarGroup.style.display = 'block';
+            } else {
+                metarGroup.style.display = 'none';
+            }
+        });
+
+        // Force uppercase for airport code
+        document.getElementById('metarAirport').addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        });
 
         document.getElementById('weatherProvider').value = weatherProvider;
         document.querySelector(`input[name="titleSelection"][value="${selectedTitle}"]`).checked = true;

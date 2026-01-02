@@ -57,6 +57,9 @@ OPEN_METEO_UNIT_PARAMS = {
     "imperial": "temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch"
 }
 
+# NOAA Aviation Weather API endpoint for METAR
+METAR_API_URL = "https://aviationweather.gov/api/data/metar"
+
 class Weather(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -97,15 +100,21 @@ class Weather(BasePlugin):
                 if settings.get('weatherTimeZone', 'locationTimeZone') == 'locationTimeZone':
                     logger.info("Using location timezone for OpenWeatherMap data.")
                     wtz = self.parse_timezone(weather_data)
-                    template_params = self.parse_weather_data(weather_data, aqi_data, wtz, units, time_format, lat)
+                    pressure_unit = settings.get('pressureUnit', 'hPa')
+                    visibility_unit = settings.get('visibilityUnit', 'auto')
+                    template_params = self.parse_weather_data(weather_data, aqi_data, wtz, units, time_format, lat, pressure_unit, visibility_unit)
                 else:
                     logger.info("Using configured timezone for OpenWeatherMap data.")
-                    template_params = self.parse_weather_data(weather_data, aqi_data, tz, units, time_format, lat)
+                    pressure_unit = settings.get('pressureUnit', 'hPa')
+                    visibility_unit = settings.get('visibilityUnit', 'auto')
+                    template_params = self.parse_weather_data(weather_data, aqi_data, tz, units, time_format, lat, pressure_unit, visibility_unit)
             elif weather_provider == "OpenMeteo":
                 forecast_days = 7
                 weather_data = self.get_open_meteo_data(lat, long, units, forecast_days + 1)
                 aqi_data = self.get_open_meteo_air_quality(lat, long)
-                template_params = self.parse_open_meteo_data(weather_data, aqi_data, tz, units, time_format, lat)
+                pressure_unit = settings.get('pressureUnit', 'hPa')
+                visibility_unit = settings.get('visibilityUnit', 'auto')
+                template_params = self.parse_open_meteo_data(weather_data, aqi_data, tz, units, time_format, lat, pressure_unit, visibility_unit)
             else:
                 raise RuntimeError(f"Unknown weather provider: {weather_provider}")
 
@@ -119,6 +128,18 @@ class Weather(BasePlugin):
             dimensions = dimensions[::-1]
 
         template_params["plugin_settings"] = settings
+
+        # Fetch and parse METAR data if enabled
+        metar_data = None
+        if settings.get('displayMetar') == 'true':
+            metar_airport = settings.get('metarAirport', 'KEDC').upper().strip()
+            if metar_airport and len(metar_airport) == 4:
+                metar_raw = self.fetch_metar(metar_airport)
+                if metar_raw:
+                    pressure_unit = settings.get('pressureUnit', 'hPa')
+                    metar_data = self.parse_metar(metar_raw, units, pressure_unit)
+        
+        template_params["metar_data"] = metar_data
 
         # Add last refresh time
         now = datetime.now(tz)
@@ -134,7 +155,7 @@ class Weather(BasePlugin):
             raise RuntimeError("Failed to take screenshot, please check logs.")
         return image
 
-    def parse_weather_data(self, weather_data, aqi_data, tz, units, time_format, lat):
+    def parse_weather_data(self, weather_data, aqi_data, tz, units, time_format, lat, pressure_unit='hPa', visibility_unit='auto'):
         current = weather_data.get("current")
         dt = datetime.fromtimestamp(current.get('dt'), tz=timezone.utc).astimezone(tz)
         current_icon = current.get("weather")[0].get("icon")
@@ -155,12 +176,12 @@ class Weather(BasePlugin):
             "time_format": time_format
         }
         data['forecast'] = self.parse_forecast(weather_data.get('daily'), tz, current_suffix, lat)
-        data['data_points'] = self.parse_data_points(weather_data, aqi_data, tz, units, time_format)
+        data['data_points'] = self.parse_data_points(weather_data, aqi_data, tz, units, time_format, pressure_unit, visibility_unit)
 
         data['hourly_forecast'] = self.parse_hourly(weather_data.get('hourly'), tz, time_format, units)
         return data
 
-    def parse_open_meteo_data(self, weather_data, aqi_data, tz, units, time_format, lat):
+    def parse_open_meteo_data(self, weather_data, aqi_data, tz, units, time_format, lat, pressure_unit='hPa', visibility_unit='auto'):
         current = weather_data.get("current_weather", {})
         dt = datetime.fromisoformat(current.get('time')).astimezone(tz) if current.get('time') else datetime.now(tz)
         weather_code = current.get("weathercode", 0)
@@ -178,7 +199,7 @@ class Weather(BasePlugin):
         }
 
         data['forecast'] = self.parse_open_meteo_forecast(weather_data.get('daily', {}), tz, is_day, lat)
-        data['data_points'] = self.parse_open_meteo_data_points(weather_data, aqi_data, tz, units, time_format)
+        data['data_points'] = self.parse_open_meteo_data_points(weather_data, aqi_data, tz, units, time_format, pressure_unit, visibility_unit)
         
         data['hourly_forecast'] = self.parse_open_meteo_hourly(weather_data.get('hourly', {}), tz, time_format)
         return data
@@ -417,7 +438,7 @@ class Weather(BasePlugin):
             hourly.append(hour_forecast)
         return hourly
 
-    def parse_data_points(self, weather, air_quality, tz, units, time_format):
+    def parse_data_points(self, weather, air_quality, tz, units, time_format, pressure_unit='hPa', visibility_unit='auto'):
         data_points = []
         sunrise_epoch = weather.get('current', {}).get("sunrise")
 
@@ -461,10 +482,18 @@ class Weather(BasePlugin):
             "icon": self.get_plugin_dir('icons/humidity.png')
         })
 
+        # Pressure unit conversion (OpenWeatherMap provides hPa)
+        pressure_hpa = weather.get('current', {}).get("pressure", 0)
+        pressure_value = pressure_hpa
+        if pressure_unit == "inHg":
+            pressure_value = pressure_hpa * 0.029529983071445
+        elif pressure_unit == "mb":
+            pressure_value = pressure_hpa  # mb and hPa are the same
+        pressure_unit_display = pressure_unit if pressure_unit != "mb" else "mb"
         data_points.append({
             "label": "Pressure",
-            "measurement": weather.get('current', {}).get("pressure"),
-            "unit": 'hPa',
+            "measurement": int(pressure_value) if pressure_unit == "hPa" or pressure_unit == "mb" else round(pressure_value, 2),
+            "unit": pressure_unit_display,
             "icon": self.get_plugin_dir('icons/pressure.png')
         })
 
@@ -475,12 +504,39 @@ class Weather(BasePlugin):
             "icon": self.get_plugin_dir('icons/uvi.png')
         })
 
-        visibility = weather.get('current', {}).get("visibility")/1000
-        visibility_str = f">{visibility}" if visibility >= 10 else visibility
+        # Visibility unit conversion (OpenWeatherMap provides meters)
+        visibility_m = weather.get('current', {}).get("visibility", 0)
+        if visibility_unit == "auto":
+            # Auto: use km for metric/standard, miles for imperial
+            if units == "imperial":
+                visibility_mi = visibility_m / 1609.34
+                visibility_value = visibility_mi
+                visibility_unit_display = "mi"
+                visibility_str = f">{visibility_value:.1f}" if visibility_value >= 10 else f"{visibility_value:.1f}"
+            else:
+                visibility_km = visibility_m / 1000
+                visibility_value = visibility_km
+                visibility_unit_display = "km"
+                visibility_str = f">{visibility_value}" if visibility_value >= 10 else visibility_value
+        elif visibility_unit == "km":
+            visibility_km = visibility_m / 1000
+            visibility_value = visibility_km
+            visibility_unit_display = "km"
+            visibility_str = f">{visibility_value}" if visibility_value >= 10 else visibility_value
+        elif visibility_unit == "mi":
+            visibility_mi = visibility_m / 1609.34
+            visibility_value = visibility_mi
+            visibility_unit_display = "mi"
+            visibility_str = f">{visibility_value:.1f}" if visibility_value >= 10 else f"{visibility_value:.1f}"
+        else:  # meters
+            visibility_value = visibility_m
+            visibility_unit_display = "m"
+            visibility_str = f">{visibility_value}" if visibility_value >= 10000 else visibility_value
+        
         data_points.append({
             "label": "Visibility",
             "measurement": visibility_str,
-            "unit": 'km',
+            "unit": visibility_unit_display,
             "icon": self.get_plugin_dir('icons/visibility.png')
         })
 
@@ -494,7 +550,7 @@ class Weather(BasePlugin):
 
         return data_points
 
-    def parse_open_meteo_data_points(self, weather_data, aqi_data, tz, units, time_format):
+    def parse_open_meteo_data_points(self, weather_data, aqi_data, tz, units, time_format, pressure_unit='hPa', visibility_unit='auto'):
         """Parses current data points from Open-Meteo API response."""
         data_points = []
         daily_data = weather_data.get('daily', {})
@@ -563,13 +619,22 @@ class Weather(BasePlugin):
         for i, time_str in enumerate(pressure_hourly_times):
             try:
                 if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
-                    current_pressure = int(pressure_values[i])
+                    pressure_hpa = pressure_values[i]
+                    # Convert to requested unit
+                    if pressure_unit == "inHg":
+                        current_pressure = round(pressure_hpa * 0.029529983071445, 2)
+                    elif pressure_unit == "mb":
+                        current_pressure = int(pressure_hpa)  # mb and hPa are the same
+                    else:  # hPa
+                        current_pressure = int(pressure_hpa)
                     break
             except ValueError:
                 logger.warning(f"Could not parse time string {time_str} for pressure.")
                 continue
+        
+        pressure_unit_display = pressure_unit if pressure_unit != "mb" else "mb"
         data_points.append({
-            "label": "Pressure", "measurement": current_pressure, "unit": 'hPa',
+            "label": "Pressure", "measurement": current_pressure, "unit": pressure_unit_display,
             "icon": self.get_plugin_dir('icons/pressure.png')
         })
 
@@ -590,29 +655,49 @@ class Weather(BasePlugin):
             "icon": self.get_plugin_dir('icons/uvi.png')
         })
 
-        # Visibility
+        # Visibility (Open-Meteo provides in meters)
         current_visibility = "N/A"
         visibility_hourly_times = hourly_data.get('time', [])
         visibility_values = hourly_data.get('visibility', [])
         for i, time_str in enumerate(visibility_hourly_times):
             try:
                 if datetime.fromisoformat(time_str).astimezone(tz).hour == current_time.hour:
-                    visibility = visibility_values[i]
-                    if units == "imperial":
-                        current_visibility = int(round(visibility, 0))
-                        unit_label = "ft"
-                    else:
-                        current_visibility = round(visibility / 1000, 1)
+                    visibility_m = visibility_values[i]
+                    # Convert based on visibility_unit setting
+                    if visibility_unit == "auto":
+                        # Auto: use km for metric/standard, miles for imperial
+                        if units == "imperial":
+                            visibility_mi = visibility_m / 1609.34
+                            current_visibility = round(visibility_mi, 1)
+                            unit_label = "mi"
+                            visibility_str = f">{current_visibility}" if current_visibility >= 10 else current_visibility
+                        else:
+                            visibility_km = visibility_m / 1000
+                            current_visibility = round(visibility_km, 1)
+                            unit_label = "km"
+                            visibility_str = f">{current_visibility}" if current_visibility >= 10 else current_visibility
+                    elif visibility_unit == "km":
+                        visibility_km = visibility_m / 1000
+                        current_visibility = round(visibility_km, 1)
                         unit_label = "km"
+                        visibility_str = f">{current_visibility}" if current_visibility >= 10 else current_visibility
+                    elif visibility_unit == "mi":
+                        visibility_mi = visibility_m / 1609.34
+                        current_visibility = round(visibility_mi, 1)
+                        unit_label = "mi"
+                        visibility_str = f">{current_visibility}" if current_visibility >= 10 else current_visibility
+                    else:  # meters
+                        current_visibility = int(visibility_m)
+                        unit_label = "m"
+                        visibility_str = f">{current_visibility}" if current_visibility >= 10000 else current_visibility
                     break
             except ValueError:
                 logger.warning(f"Could not parse time string {time_str} for visibility.")
                 continue
 
-        visibility_str = f">{current_visibility}" if isinstance(current_visibility, (int, float)) and (
-            (units == "imperial" and current_visibility >= 32808) or 
-            (units != "imperial" and current_visibility >= 10)
-        ) else current_visibility
+        if current_visibility == "N/A":
+            visibility_str = "N/A"
+            unit_label = ""
 
         data_points.append({
             "label": "Visibility", "measurement": visibility_str, "unit": unit_label,
@@ -724,6 +809,130 @@ class Weather(BasePlugin):
 
         return dt.strftime(fmt).lstrip("0")
     
+    def fetch_metar(self, icao_code):
+        """Fetch METAR data from NOAA Aviation Weather API."""
+        params = {
+            'ids': icao_code.upper(),
+            'format': 'json',
+            'hours': 1,
+            'taf': 'false'
+        }
+        
+        try:
+            logger.info(f"Fetching METAR data for airport: {icao_code}")
+            response = requests.get(METAR_API_URL, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if not isinstance(data, list) or len(data) == 0:
+                logger.warning(f"No METAR data received for {icao_code}")
+                return None
+            
+            # Get the most recent report
+            metar_data = data[0]
+            logger.info(f"Successfully fetched METAR data for {icao_code}")
+            return metar_data
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to fetch METAR data: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error processing METAR data: {e}")
+            return None
+
+    def parse_metar(self, metar_data, units, pressure_unit):
+        """Parse METAR data into a readable format."""
+        if not metar_data:
+            return None
+            
+        station_id = metar_data.get('icaoId', metar_data.get('stationId', ''))
+        raw_text = metar_data.get('rawOb', metar_data.get('rawText', ''))
+        
+        # Extract key information
+        temp = metar_data.get('temp', None)
+        dewp = metar_data.get('dewp', None)
+        wind_dir = metar_data.get('wdir', None)
+        wind_speed = metar_data.get('wspd', None)
+        visibility = metar_data.get('visib', None)
+        altim = metar_data.get('altim', None)
+        clouds = metar_data.get('skyc', [])
+        flight_cat = metar_data.get('fltlvl', metar_data.get('flightCategory', ''))
+        
+        # Format temperature (METAR is always in Celsius)
+        temp_str = "N/A"
+        if temp is not None:
+            try:
+                temp_c = float(temp)
+                if units == "imperial":
+                    temp_f = (temp_c * 9/5) + 32
+                    temp_str = f"{int(temp_f)}°F ({int(temp_c)}°C)"
+                else:
+                    temp_str = f"{int(temp_c)}°C"
+            except (ValueError, TypeError):
+                temp_str = "N/A"
+        
+        # Format wind
+        wind_str = "N/A"
+        if wind_dir is not None and wind_speed is not None:
+            try:
+                wind_dir_int = int(wind_dir)
+                wind_speed_int = int(wind_speed)
+                # Convert knots to preferred unit
+                if units == "imperial":
+                    wind_mph = wind_speed_int * 1.15078
+                    wind_str = f"{wind_dir_int:03d}° @ {int(wind_mph)} mph ({wind_speed_int} kt)"
+                elif units == "metric":
+                    wind_ms = wind_speed_int * 0.514444
+                    wind_str = f"{wind_dir_int:03d}° @ {int(wind_ms)} m/s ({wind_speed_int} kt)"
+                else:
+                    wind_str = f"{wind_dir_int:03d}° @ {wind_speed_int} kt"
+            except (ValueError, TypeError):
+                wind_str = "N/A"
+        
+        # Format visibility (METAR is in statute miles)
+        vis_str = "N/A"
+        if visibility is not None:
+            try:
+                vis_sm = float(visibility)
+                if vis_sm < 10:
+                    vis_str = f"{vis_sm:.1f} SM"
+                else:
+                    vis_str = f"{int(vis_sm)} SM"
+            except (ValueError, TypeError):
+                vis_str = "N/A"
+        
+        # Format altimeter (convert to preferred unit)
+        alt_str = "N/A"
+        if altim is not None:
+            try:
+                alt_inhg = float(altim)
+                if pressure_unit == "inHg":
+                    alt_str = f"{alt_inhg:.2f} inHg"
+                elif pressure_unit == "mb":
+                    alt_mb = alt_inhg * 33.8639
+                    alt_str = f"{alt_mb:.1f} mb"
+                else:  # hPa (default)
+                    alt_hpa = alt_inhg * 33.8639
+                    alt_str = f"{alt_hpa:.1f} hPa"
+            except (ValueError, TypeError):
+                alt_str = "N/A"
+        
+        # Format clouds
+        cloud_str = ', '.join(clouds) if clouds and isinstance(clouds, list) else "CLR"
+        
+        # Format the data
+        parsed = {
+            'station': station_id,
+            'raw': raw_text,
+            'temp': temp_str,
+            'wind': wind_str,
+            'visibility': vis_str,
+            'altimeter': alt_str,
+            'clouds': cloud_str,
+            'flight_cat': flight_cat if flight_cat else "N/A"
+        }
+        
+        return parsed
+
     def parse_timezone(self, weatherdata):
         """Parse timezone from weather data"""
         if 'timezone' in weatherdata:
