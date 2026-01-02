@@ -5,19 +5,21 @@ This plugin displays METAR (Meteorological Aerodrome Report) maps on your e-ink 
 ## Features
 
 - Displays METAR map images from aviation weather services
-- Default URL shows CONUS (Continental US) METAR observations from Aviation Weather Center
-- Supports custom METAR map URLs for different regions or services
+- Supports any METAR map URL that provides a direct image link
+- Works with various aviation weather services
 
 ## Configuration
 
-You can configure a custom METAR map URL in the plugin settings, or leave it empty to use the default CONUS map.
+**URL is required.** You must provide a direct URL to a METAR map image in the plugin settings.
 
-## Default URL
+## Finding METAR Map URLs
 
-The default URL points to the Aviation Weather Center's CONUS METAR map:
-`https://aviationweather.gov/data/obs/metar/map/conus.png`
+You can find METAR map images from various aviation weather services:
 
-You can use other regional maps or custom METAR map services by providing a custom URL in the settings.
+- **Aviation Weather Center (AWC)**: Visit https://aviationweather.gov and look for METAR map images
+- **Other aviation weather services** that provide METAR map images
+- Make sure the URL points directly to an image file (PNG, JPG, etc.)
+- Test the URL in a web browser first to ensure it loads correctly
 
 ## Icon
 
