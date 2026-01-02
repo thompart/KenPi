@@ -1,0 +1,21 @@
+<div class="form-group">
+    <label for="url" class="form-label">METAR Map URL (optional):</label>
+    <input type="text" id="url" name="url" placeholder="Leave empty to use default CONUS METAR map" class="form-input">
+    <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">
+        Leave empty to use the default Aviation Weather Center CONUS METAR map, or provide a custom URL to a METAR map image.
+    </small>
+</div>
+
+<div class="form-group">
+    <span style="color: var(--text-primary);">Note: The default URL shows METAR observations for the Continental US (CONUS). You can use other regional maps or custom METAR map services.</span>
+</div>
+
+<script>
+    // populate form values from plugin settings
+    document.addEventListener('DOMContentLoaded', () => {        
+        if (loadPluginSettings) {
+            document.getElementById('url').value = pluginSettings.url || '';
+        }
+    });
+</script>
+
