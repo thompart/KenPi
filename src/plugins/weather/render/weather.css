@@ -269,6 +269,11 @@
   align-items: center;
 }
 
+.moon-phase-percent {
+  flex: 1;
+  font-size: min(2dvh, 1.8vw);
+}
+
 .min-max {
   font-size: 12cqmin;
   text-align: center;
@@ -332,7 +337,7 @@
   justify-content: center;
   gap: 0.8dvw;
   width: 100%;
-  font-size: min(2dvh, 1.8vw);
+  font-size: min(2.5dvh, 2.3vw);
   padding: 0.5dvh 0;
   margin-top: 0.5dvh;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
@@ -349,7 +354,7 @@
 
 .metar-data {
   white-space: nowrap;
-  font-size: min(1.8dvh, 1.6vw);
+  font-size: min(2.3dvh, 2.1vw);
 }
 
 @media (max-width: 250px) {
