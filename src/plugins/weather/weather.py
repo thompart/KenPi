@@ -870,7 +870,7 @@ class Weather(BasePlugin):
             except (ValueError, TypeError):
                 temp_str = "N/A"
         
-        # Format wind
+        # Format wind (compact for single line)
         wind_str = "N/A"
         if wind_dir is not None and wind_speed is not None:
             try:
@@ -879,40 +879,40 @@ class Weather(BasePlugin):
                 # Convert knots to preferred unit
                 if units == "imperial":
                     wind_mph = wind_speed_int * 1.15078
-                    wind_str = f"{wind_dir_int:03d}° @ {int(wind_mph)} mph ({wind_speed_int} kt)"
+                    wind_str = f"{wind_dir_int:03d}°@{int(wind_mph)}mph"
                 elif units == "metric":
                     wind_ms = wind_speed_int * 0.514444
-                    wind_str = f"{wind_dir_int:03d}° @ {int(wind_ms)} m/s ({wind_speed_int} kt)"
+                    wind_str = f"{wind_dir_int:03d}°@{int(wind_ms)}m/s"
                 else:
-                    wind_str = f"{wind_dir_int:03d}° @ {wind_speed_int} kt"
+                    wind_str = f"{wind_dir_int:03d}°@{wind_speed_int}kt"
             except (ValueError, TypeError):
                 wind_str = "N/A"
         
-        # Format visibility (METAR is in statute miles)
+        # Format visibility (METAR is in statute miles, compact for single line)
         vis_str = "N/A"
         if visibility is not None:
             try:
                 vis_sm = float(visibility)
                 if vis_sm < 10:
-                    vis_str = f"{vis_sm:.1f} SM"
+                    vis_str = f"{vis_sm:.1f}SM"
                 else:
-                    vis_str = f"{int(vis_sm)} SM"
+                    vis_str = f"{int(vis_sm)}SM"
             except (ValueError, TypeError):
                 vis_str = "N/A"
         
-        # Format altimeter (convert to preferred unit)
+        # Format altimeter (convert to preferred unit, compact for single line)
         alt_str = "N/A"
         if altim is not None:
             try:
                 alt_inhg = float(altim)
                 if pressure_unit == "inHg":
-                    alt_str = f"{alt_inhg:.2f} inHg"
+                    alt_str = f"{alt_inhg:.2f}"
                 elif pressure_unit == "mb":
                     alt_mb = alt_inhg * 33.8639
-                    alt_str = f"{alt_mb:.1f} mb"
+                    alt_str = f"{alt_mb:.1f}"
                 else:  # hPa (default)
                     alt_hpa = alt_inhg * 33.8639
-                    alt_str = f"{alt_hpa:.1f} hPa"
+                    alt_str = f"{alt_hpa:.1f}"
             except (ValueError, TypeError):
                 alt_str = "N/A"
         
@@ -922,7 +922,6 @@ class Weather(BasePlugin):
         # Format the data
         parsed = {
             'station': station_id,
-            'raw': raw_text,
             'temp': temp_str,
             'wind': wind_str,
             'visibility': vis_str,

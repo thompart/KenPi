@@ -81,21 +81,14 @@
 
   <!-- METAR Data -->
   {% if plugin_settings.displayMetar == "true" and metar_data %}
-  <div class="metar-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color, #ccc);">
-    <div style="font-weight: bold; margin-bottom: 8px; font-size: 0.95em;">METAR - {{ metar_data.station }}</div>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.85em;">
-      <div><strong>Temp:</strong> {{ metar_data.temp }}</div>
-      <div><strong>Wind:</strong> {{ metar_data.wind }}</div>
-      <div><strong>Visibility:</strong> {{ metar_data.visibility }}</div>
-      <div><strong>Altimeter:</strong> {{ metar_data.altimeter }}</div>
-      <div><strong>Clouds:</strong> {{ metar_data.clouds }}</div>
-      <div><strong>Flight Cat:</strong> {{ metar_data.flight_cat }}</div>
-    </div>
-    {% if metar_data.raw %}
-    <div style="margin-top: 8px; font-size: 0.75em; font-family: monospace; color: var(--text-secondary, #666); word-break: break-all;">
-      {{ metar_data.raw }}
-    </div>
-    {% endif %}
+  <div class="metar-section">
+    <span class="metar-station">{{ metar_data.station }}</span>
+    <span class="metar-data">Temp: {{ metar_data.temp }}</span>
+    <span class="metar-data">Wind: {{ metar_data.wind }}</span>
+    <span class="metar-data">Vis: {{ metar_data.visibility }}</span>
+    <span class="metar-data">Alt: {{ metar_data.altimeter }}</span>
+    <span class="metar-data">Clouds: {{ metar_data.clouds }}</span>
+    <span class="metar-data">Cat: {{ metar_data.flight_cat }}</span>
   </div>
   {% endif %}
 </div>

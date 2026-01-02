@@ -324,6 +324,34 @@
 
 }
 
+.metar-section {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8dvw;
+  width: 100%;
+  font-size: min(2dvh, 1.8vw);
+  padding: 0.5dvh 0;
+  margin-top: 0.5dvh;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  min-height: fit-content;
+  max-height: 8dvh;
+  overflow: hidden;
+}
+
+.metar-station {
+  font-weight: bold;
+  margin-right: 0.5dvw;
+  white-space: nowrap;
+}
+
+.metar-data {
+  white-space: nowrap;
+  font-size: min(1.8dvh, 1.6vw);
+}
+
 @media (max-width: 250px) {
   .weather-dashboard {
     font-family: "Dogica";
